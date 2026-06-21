@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <script
+      src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"
+      integrity="sha384-sG0Hv1tP1lZCk9KQmrIbY/XNwi+OY84GQqhMscbnsoBFqAz8KNCil1kvfL3Hbbk2"
+      crossorigin="anonymous"
+    ></script>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body {
+        margin: 0;
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background: #0a0a0a;
+        font-family: "JetBrains Mono", "Menlo", "Consolas", monospace;
+        color: #fafafa;
+      }
+      .clip {
+        position: absolute;
+        left: 0; top: 0;
+        width: 1920px;
+        height: 1080px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 80px 120px;
+        font-size: 48px;
+        line-height: 1.3;
+        text-align: center;
+        opacity: 0;
+      }
+      .center-col { flex-direction: column; gap: 32px; }
+      .small { font-size: 32px; line-height: 1.4; color: #fafafa; }
+      .muted { color: #71717a; }
+      .destructive { color: #ff4d4d; }
+      .safe { color: #4ade80; }
+      .pending { color: #facc15; }
+      .bullets { text-align: left; font-size: 36px; line-height: 1.5; }
+      .bullets li { list-style: none; margin: 16px 0; }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 24px;
+        width: 100%;
+        height: 100%;
+        padding: 80px 120px;
+      }
+      .card {
+        background: #141414;
+        border: 2px solid #2a2a2a;
+        border-radius: 20px;
+        padding: 32px 28px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: 20px;
+      }
+      .card-head { font-size: 44px; font-weight: 700; }
+      .card-body { font-size: 24px; line-height: 1.4; color: #a1a1aa; }
+      .terminal {
+        background: #000;
+        border: 1px solid #2a2a2a;
+        border-radius: 16px;
+        padding: 48px 64px;
+        font-size: 24px;
+        line-height: 1.5;
+        text-align: left;
+        width: 100%;
+        max-width: 1280px;
+        font-family: "JetBrains Mono", monospace;
+        color: #d4d4d8;
+        white-space: pre-wrap;
+        align-self: center;
+      }
+      .terminal .term-prompt { color: #4ade80; }
+      .terminal .term-dim { color: #71717a; }
+      .terminal .term-red { color: #ff4d4d; }
+      .terminal .term-yellow { color: #facc15; }
+      .wordmark {
+        font-size: 120px;
+        font-weight: 700;
+        letter-spacing: -3px;
+      }
+      .wordmark-sm { font-size: 76px; font-weight: 700; letter-spacing: -2px; }
+      .tagline { font-size: 48px; }
+      .url { font-size: 28px; color: #71717a; margin-top: 20px; }
+    </style>
+  </head>
+  <body>
+    <div
+      id="root"
+      data-composition-id="main-16x9"
+      data-start="0"
+      data-duration="80"
+      data-width="1920"
+      data-height="1080"
+    >
+
+      <!-- =========================== Scene 1: Hook (0-5s) =========================== -->
+      <div id="s1" class="clip" data-start="0" data-duration="5" data-track-index="1">
+        <div class="center-col" style="padding: 0 80px;">
+          <div id="s1-line1" style="font-size: 56px; line-height: 1.25;">
+            Your AI agent just <span id="s1-isolated" class="destructive">isolated</span> a domain controller.
+          </div>
+        </div>
+      </div>
+
+      <!-- =========================== Scene 2: Failure (5-15s) =========================== -->
+      <div id="s2" class="clip" data-start="5" data-duration="10" data-track-index="1">
+        <div class="center-col" style="padding: 0 120px;">
+          <div class="small" id="s2-1">Agents in production. Acting on credentials.</div>
+          <div class="small" id="s2-2" style="display:none">No production vs. <span class="muted">dev</span> boundary at the action layer.</div>
+          <div class="small" id="s2-3" style="display:none"><span class="muted">Output guardrails</span> don't stop the tool call. <span class="muted">Observability</span> is post-hoc.</div>
+        </div>
+      </div>
+
+      <!-- =========================== Scene 3: The gap (15-28s) =========================== -->
+      <div id="s3" class="clip" data-start="15" data-duration="13" data-track-index="1">
+        <div class="center-col">
+          <div style="font-size: 52px;">The gap is at the <span class="destructive">action layer</span>.</div>
+          <div class="small" id="s3-detail">No SOC-action catalog. No typed policy. No audit shape for SIEM.</div>
+        </div>
+      </div>
+
+      <!-- =========================== Scene 4: mcp-socd intro (28-45s) =========================== -->
+      <div id="s4" class="clip" data-start="28" data-duration="17" data-track-index="1">
+        <div class="center-col">
+          <div id="s4-mark" class="wordmark">mcp-socd</div>
+          <div id="s4-tag" class="tagline"><span class="safe">default-deny</span> for AI agents.</div>
+          <ul class="bullets" id="s4-bullets" style="display:none">
+            <li>- stdio proxy between agent and MCP server</li>
+            <li>- action-layer enforcement, not output</li>
+            <li>- one static binary, framework-agnostic</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- =========================== Scene 5: Four primitives (45-65s) =========================== -->
+      <div id="s5" class="clip" data-start="45" data-duration="20" data-track-index="1">
+        <div class="grid">
+          <div class="card" id="s5-c1">
+            <div class="card-head">catalog</div>
+            <div class="card-body">typed actions, blast radius, OCSF audit shape</div>
+          </div>
+          <div class="card" id="s5-c2" style="border-color:#7f1d1d">
+            <div class="card-head destructive">policy</div>
+            <div class="card-body">allowlist, default-deny, destructive-verb gate</div>
+          </div>
+          <div class="card" id="s5-c3">
+            <div class="card-head">audit</div>
+            <div class="card-body">OCSF Detection Finding (UID 2004) to JSON-lines</div>
+          </div>
+          <div class="card" id="s5-c4" style="border-color:#713f12">
+            <div class="card-head pending">approval</div>
+            <div class="card-body">out-of-band; terminal prompt or Slack DM</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- =========================== Scene 6: Demo terminal (65-75s) =========================== -->
+      <div id="s6" class="clip" data-start="65" data-duration="10" data-track-index="1">
+        <div class="center-col" style="padding: 80px 120px;">
+          <div class="terminal" id="s6-term"></div>
+        </div>
+      </div>
+
+      <!-- =========================== Scene 7: Close (75-80s) =========================== -->
+      <div id="s7" class="clip" data-start="75" data-duration="5" data-track-index="1">
+        <div class="center-col">
+          <div class="wordmark-sm">mcp-socd</div>
+          <div class="tagline"><span>default-deny.</span> <span class="safe">in production.</span></div>
+          <div class="url">github.com/AnandSundar/mcp-socd</div>
+        </div>
+      </div>
+
+    </div>
+
+    <script>
+      window.__timelines = window.__timelines || {};
+      const tl = gsap.timeline({ paused: true });
+
+      // ----- Scene 1: Hook (0-5s) -----
+      tl.from("#s1", { opacity: 0, duration: 0.3 }, 0);
+      tl.from("#s1-line1", { opacity: 0, duration: 0.4 }, 0.2);
+      tl.from("#s1-isolated", { scale: 0.6, transformOrigin: "50% 50%", duration: 0.01, ease: "none" }, 0.2);
+      tl.to("#s1-isolated", { scale: 1.15, duration: 0.2, ease: "power2.out" }, 2.5);
+      tl.to("#s1-isolated", { scale: 1.0, duration: 0.2, ease: "power2.in" }, 2.7);
+      tl.to("#s1", { opacity: 0, duration: 0.3 }, 4.7);
+      tl.set("#s1", { opacity: 0 }, 5.0);
+
+      // ----- Scene 2: Failure (5-15s) -----
+      tl.from("#s2", { opacity: 0, duration: 0.3 }, 5.0);
+      tl.from("#s2-1", { opacity: 0, x: -40, duration: 0.4 }, 5.2);
+      tl.to("#s2-1", { opacity: 0, duration: 0.3 }, 8.5);
+      tl.from("#s2-2", { opacity: 0, x: -40, duration: 0.4 }, 8.7);
+      tl.to("#s2-2", { opacity: 0, duration: 0.3 }, 11.0);
+      tl.from("#s2-3", { opacity: 0, x: -40, duration: 0.4 }, 11.2);
+      tl.to("#s2", { opacity: 0, duration: 0.3 }, 14.7);
+      tl.set("#s2", { opacity: 0 }, 15.0);
+
+      // ----- Scene 3: The gap (15-28s) -----
+      tl.from("#s3", { opacity: 0, duration: 0.4 }, 15.0);
+      tl.from("#s3-detail", { opacity: 0, y: 20, duration: 0.5 }, 17.5);
+      tl.to("#s3", { opacity: 0, duration: 0.4 }, 27.6);
+      tl.set("#s3", { opacity: 0 }, 28.0);
+
+      // ----- Scene 4: mcp-socd intro (28-45s) -----
+      tl.from("#s4", { opacity: 0, duration: 0.3 }, 28.0);
+      tl.from("#s4-mark", { scale: 0.5, transformOrigin: "50% 50%", duration: 0.5, ease: "back.out(1.2)" }, 28.2);
+      tl.from("#s4-tag", { opacity: 0, duration: 0.4 }, 29.2);
+      tl.from("#s4-bullets", { opacity: 0, duration: 0.5 }, 30.5);
+      tl.from("#s4-bullets li:nth-child(1)", { opacity: 0, x: -30, duration: 0.3 }, 31.0);
+      tl.from("#s4-bullets li:nth-child(2)", { opacity: 0, x: -30, duration: 0.3 }, 31.6);
+      tl.from("#s4-bullets li:nth-child(3)", { opacity: 0, x: -30, duration: 0.3 }, 32.2);
+      tl.to("#s4", { opacity: 0, duration: 0.4 }, 44.6);
+      tl.set("#s4", { opacity: 0 }, 45.0);
+
+      // ----- Scene 5: Four primitives (45-65s) -----
+      tl.from("#s5", { opacity: 0, duration: 0.4 }, 45.0);
+      tl.from("#s5-c1", { opacity: 0, scale: 0.8, transformOrigin: "50% 50%", duration: 0.4, ease: "back.out(1.2)" }, 45.3);
+      tl.from("#s5-c2", { opacity: 0, scale: 0.8, transformOrigin: "50% 50%", duration: 0.4, ease: "back.out(1.2)" }, 45.8);
+      tl.from("#s5-c3", { opacity: 0, scale: 0.8, transformOrigin: "50% 50%", duration: 0.4, ease: "back.out(1.2)" }, 46.3);
+      tl.from("#s5-c4", { opacity: 0, scale: 0.8, transformOrigin: "50% 50%", duration: 0.4, ease: "back.out(1.2)" }, 46.8);
+      tl.to("#s5", { opacity: 0, duration: 0.4 }, 64.6);
+      tl.set("#s5", { opacity: 0 }, 65.0);
+
+      // ----- Scene 6: Demo terminal (65-75s) -----
+      const term = document.getElementById("s6-term");
+      const termLines = [
+        { text: '<span class="term-dim">$ mcp-socd -- falcon-mcp</span>', at: 65.0 },
+        { text: 'mcp-socd 0.1.0', at: 65.6 },
+        { text: '  <span class="term-dim">config:</span>    ~/.config/mcp-socd/config.yaml', at: 66.2 },
+        { text: '  <span class="term-dim">upstream:</span>  [falcon-mcp]', at: 66.8 },
+        { text: '  <span class="term-dim">audit:</span>     stderr (use --audit-stdout for SIEM)', at: 67.4 },
+        { text: '', at: 68.4 },
+        { text: '<span class="term-prompt">&gt;</span> agent → <span class="term-dim">isolate_endpoint</span> <span class="term-dim">host=dc01.corp</span>', at: 68.6 },
+        { text: '<span class="term-dim">policy:</span>    <span class="term-red">blast_radius=5</span> → require_approval', at: 70.0 },
+        { text: '<span class="term-dim">approval:</span>  <span class="term-yellow">pending Slack @secops</span>', at: 71.4 },
+        { text: '<span class="term-dim">audit:</span>     OCSF 2004 verdict=awaiting_approval actor=agent:v1', at: 72.6 },
+      ];
+      term.innerHTML = '';
+      termLines.forEach((line) => {
+        tl.call(() => {
+          const div = document.createElement("div");
+          div.innerHTML = line.text || "&nbsp;";
+          term.appendChild(div);
+        }, [], line.at);
+      });
+      tl.from("#s6", { opacity: 0, duration: 0.4 }, 65.0);
+      tl.to("#s6", { opacity: 0, duration: 0.4 }, 74.6);
+      tl.set("#s6", { opacity: 0 }, 75.0);
+
+      // ----- Scene 7: Close (75-80s) -----
+      tl.from("#s7", { opacity: 0, duration: 0.4 }, 75.0);
+
+      window.__timelines["main-16x9"] = tl;
+    </script>
+  </body>
+</html>

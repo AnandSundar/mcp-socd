@@ -122,6 +122,24 @@ type Action struct {
 	// the catalog rejects actions that leave it empty.
 	OCSFAuditShape AuditShape `yaml:"ocsf_audit_shape"`
 
+	// PrimaryArg is the name of the argument that carries the
+	// action's "target" — the high-cardinality identifier the policy
+	// engine matches against Rule.Targets (host_id for
+	// isolate_endpoint, user_id for block_user_account, etc.).
+	//
+	// When set, the proxy extracts args[PrimaryArg] as the policy
+	// engine's Target field. When unset (empty string), the proxy
+	// falls back to its name-based heuristic AND emits a startup
+	// warning so operators know the action is ungoverned.
+	//
+	// This per-action declaration defends against bypass attacks
+	// where a malicious agent puts the actual target in a
+	// non-canonical argument name (e.g. `subject` instead of
+	// `host_id`) to evade target-restricted allow rules. With
+	// PrimaryArg declared in the catalog, the proxy looks at exactly
+	// the right argument and cannot be steered.
+	PrimaryArg string `yaml:"primary_arg,omitempty"`
+
 	// InputSchema is the compiled JSON-Schema used at runtime to
 	// validate an agent's arguments object. Loaded by loader.go from
 	// the RawSchema bytes; starter actions populate it directly in
@@ -163,6 +181,24 @@ func (a *Action) Validate() error {
 	}
 	if len(a.OCSFAuditShape.Types) == 0 {
 		return fmt.Errorf("action %q: ocsf_audit_shape.types must list at least one tag", a.Name)
+	}
+	if a.PrimaryArg != "" {
+		// PrimaryArg must reference a declared Param so the
+		// proxy can extract the target reliably. A typo
+		// (e.g. "hostid" vs "host_id") would silently fall
+		// through to the name-based heuristic and defeat the
+		// per-action target declaration.
+		found := false
+		for _, p := range a.Params {
+			if p.Name == a.PrimaryArg {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return fmt.Errorf("action %q: primary_arg %q does not reference a declared param",
+				a.Name, a.PrimaryArg)
+		}
 	}
 	return nil
 }

@@ -73,6 +73,7 @@ func starterIsolateEndpoint() Action {
 			Types:      []string{"soc-action", "isolation"},
 		},
 		InputSchema: schema,
+		PrimaryArg: "host_id",
 	}
 }
 
@@ -104,6 +105,7 @@ func starterBlockUserAccount() Action {
 			Types:      []string{"soc-action", "identity"},
 		},
 		InputSchema: schema,
+		PrimaryArg: "user_id",
 	}
 }
 
@@ -136,6 +138,7 @@ func starterRotateAPIKey() Action {
 			Types:      []string{"soc-action", "credential-rotation"},
 		},
 		InputSchema: schema,
+		PrimaryArg: "key_id",
 	}
 }
 
@@ -168,6 +171,11 @@ func starterSubmitEDRQuery() Action {
 			Types:      []string{"soc-action", "edr-query"},
 		},
 		InputSchema: schema,
+		// No PrimaryArg: submit_edr_query's "target" is the
+		// query DSL itself, not a single high-cardinality
+		// identifier. The proxy leaves Target empty for
+		// read-only actions so target-restricted allow
+		// rules don't accidentally scope to one host.
 	}
 }
 
@@ -198,6 +206,7 @@ func starterEnrichIOC() Action {
 			Types:      []string{"soc-action", "enrichment"},
 		},
 		InputSchema: schema,
+		PrimaryArg: "indicator",
 	}
 }
 

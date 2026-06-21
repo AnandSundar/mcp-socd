@@ -2,6 +2,7 @@ package proxy
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"mcp-socd/internal/catalog"
@@ -147,18 +148,73 @@ func interceptCall(
 	}
 
 	if verr := cat.Validate(params.Name, params.Arguments); verr != nil {
-		emitter.Emit(map[string]any{
-			"decision": "error",
-			"reason":   "schema_violation",
-			"tool":     params.Name,
-			"error":    verr.Error(),
-		})
-		body, _ := EncodeErrorResponse(req, CodeInvalidParams,
-			"tools/call: "+verr.Error(), nil)
+		// Distinguish "unknown action" (the agent called a tool
+		// the proxy does not understand) from "action exists but
+		// arguments fail schema validation" (a malformed call
+		// against a known tool). The two failure modes are
+		// observably different to the operator and warrant
+		// different audit reasons / agent-facing error codes.
+		var reason string
+		var code int
+		var agentMsg string
+		switch {
+		case errors.Is(verr, catalog.ErrActionNotFound):
+			reason = "action_unknown"
+			code = CodeMethodNotFound // MCP: tool not registered
+			agentMsg = fmt.Sprintf("tools/call: unknown action %q", params.Name)
+			emitter.Emit(map[string]any{
+				"decision": "error",
+				"reason":   reason,
+				"tool":     params.Name,
+				"error":    verr.Error(),
+			})
+		case errors.Is(verr, catalog.ErrSchemaViolation):
+			reason = "schema_violation"
+			code = CodeInvalidParams // MCP: -32602
+			// Generic agent-facing message: do NOT echo the
+			// schema violation detail back to the caller. The
+			// JSON-Schema fragment is internal to the proxy and
+			// could be used as a probing oracle by a malicious
+			// agent (e.g. "the schema says host_id must match
+			// X, so the backend accepts X"). Keep the detail in
+			// the audit event only.
+			agentMsg = "tools/call: arguments failed validation"
+			emitter.Emit(map[string]any{
+				"decision": "error",
+				"reason":   reason,
+				"tool":     params.Name,
+				"error":    verr.Error(),
+			})
+		default:
+			// Unknown validation error: be conservative on the
+			// agent-facing surface, verbose on the audit side.
+			reason = "validation_error"
+			code = CodeInvalidParams
+			agentMsg = "tools/call: arguments failed validation"
+			emitter.Emit(map[string]any{
+				"decision": "error",
+				"reason":   reason,
+				"tool":     params.Name,
+				"error":    verr.Error(),
+			})
+		}
+		body, _ := EncodeErrorResponse(req, code, agentMsg, nil)
 		return InterceptResult{Synthetic: body}
 	}
 
-	target := extractTarget(params.Name, params.Arguments)
+	// Per-action target extraction. The catalog declares
+	// PrimaryArg on each action; the proxy consults it directly
+	// so a malicious agent cannot bypass target-restricted allow
+	// rules by putting the target in a non-canonical argument
+	// name (e.g. `subject` instead of `host_id`).
+	//
+	// We look up the action after schema validation succeeds
+	// (so the catalog rejects unknown actions first). For
+	// actions that declare no PrimaryArg, the proxy leaves
+	// Target empty — the policy engine treats that as "any
+	// target" and rules with no declared targets still match.
+	action, _ := cat.Get(params.Name)
+	target := extractTarget(action, params.Arguments)
 	decision := engine.Evaluate(policy.Call{
 		Tool:      params.Name,
 		Target:    target,
@@ -234,30 +290,33 @@ func decodeToolsCallParams(raw json.RawMessage) (ToolsCallParams, error) {
 	return p, nil
 }
 
-// targetArgNames is the canonical order in which the proxy looks for
-// a "primary" argument to feed the policy engine's Target field. The
-// order reflects the starter catalog's per-action argument conventions;
-// unknown tools fall through to "" (empty target), which the policy
-// engine treats as "any target" for rules that allow it.
-var targetArgNames = []string{"host_id", "user_id", "key_id", "indicator", "query"}
-
-// extractTarget picks the first non-empty scalar argument from args,
-// consulting targetArgNames in order. Returns "" when no candidate is
-// present or when the value is not a string.
+// extractTarget returns the value of action.PrimaryArg from args, or
+// the empty string if the action does not declare a PrimaryArg or the
+// argument is missing/non-string. The action must already be validated
+// against the catalog by the caller.
 //
-// The starter catalog encodes the primary target as a named string
-// argument (host_id for isolate_endpoint, user_id for
-// block_user_account, etc.). Custom actions that follow the same
-// convention will be matched automatically; non-conforming actions
-// fall through with Target == "", which is a valid policy input (rules
-// with no targets declared match anything).
-func extractTarget(tool string, args map[string]any) string {
-	for _, k := range targetArgNames {
-		if v, ok := args[k]; ok {
-			if s, ok := v.(string); ok && s != "" {
-				return s
-			}
-		}
+// Per-action PrimaryArg declaration defends against bypass attacks
+// where a malicious agent puts the actual target in a non-canonical
+// argument name (e.g. `subject` instead of `host_id`) to evade
+// target-restricted allow rules. With PrimaryArg declared in the
+// catalog, the proxy looks at exactly the right argument and cannot
+// be steered.
+//
+// Returns "" when action has no PrimaryArg (the policy engine treats
+// empty Target as "any target", which is the correct posture for
+// read-only actions like submit_edr_query that don't have a single
+// high-cardinality identifier).
+func extractTarget(action catalog.Action, args map[string]any) string {
+	if action.PrimaryArg == "" {
+		return ""
 	}
-	return ""
+	v, ok := args[action.PrimaryArg]
+	if !ok {
+		return ""
+	}
+	s, ok := v.(string)
+	if !ok || s == "" {
+		return ""
+	}
+	return s
 }

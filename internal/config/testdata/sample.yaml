@@ -1,0 +1,25 @@
+version: 1
+
+upstream:
+  command: ["npx", "-y", "@modelcontextprotocol/server-filesystem", "/tmp"]
+
+policy:
+  default_action: deny
+  rules:
+    - id: allow-read-ioc
+      tool: "falcon.search.iocs"
+      action: allow
+    - id: require-approval-isolate
+      tool: "falcon.host.isolate"
+      targets: ["server99.example.com"]
+      action: require_approval
+
+approval:
+  timeout_seconds: 300
+  channels:
+    - type: terminal
+
+audit:
+  stdout: false
+  file: ""
+  heartbeat_seconds: 60

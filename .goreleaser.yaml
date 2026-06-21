@@ -1,0 +1,90 @@
+# GoReleaser config for mcp-socd. See https://goreleaser.com/customization/build/
+# Distribution targets:
+#   - GitHub Release: source archives + binaries for linux/darwin/windows x amd64/arm64
+#   - Homebrew tap: mcp-socd formula
+#   - Scoop bucket: mcp-socd manifest
+#   - Static tarball with sha256 checksums
+version: 2
+
+project_name: mcp-socd
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: mcp-socd
+    main: ./cmd/mcp-socd
+    binary: mcp-socd
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ignore:
+      - goos: windows
+        goarch: arm64
+    mod_timestamp: "{{ .CommitTimestamp }}"
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w
+      - -X mcp-socd/internal/version.Version={{.Version}}
+      - -X mcp-socd/internal/version.Commit={{.ShortCommit}}
+      - -X mcp-socd/internal/version.BuildDate={{.Date}}
+
+archives:
+  - id: default
+    formats: [tar.gz]
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - LICENSE
+      - README.md
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+
+checksum:
+  name_template: "{{ .ProjectName }}_{{ .Version }}_checksums.txt"
+  algorithm: sha256
+
+snapshot:
+  version_template: "{{ .ShortCommit }}"
+
+changelog:
+  use: git
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+
+brews:
+  - repository:
+      owner: mcp-socd
+      name: homebrew-tap
+    homepage: https://github.com/mcp-socd/mcp-socd
+    description: "MCP-aware security proxy for SOC teams"
+    license: "Apache-2.0"
+    test: |
+      system "#{bin}/mcp-socd --version"
+
+scoops:
+  - repository:
+      owner: mcp-socd
+      name: scoop-bucket
+    homepage: https://github.com/mcp-socd/mcp-socd
+    description: "MCP-aware security proxy for SOC teams"
+    license: "Apache-2.0"
+
+release:
+  github:
+    owner: mcp-socd
+    name: mcp-socd
+  prerelease: auto
+  draft: false

@@ -1,0 +1,36 @@
+{
+  "type": "block_actions",
+  "user": {
+    "id": "U_APPROVER_123",
+    "username": "approver",
+    "name": "approver",
+    "team_id": "T_TEAM"
+  },
+  "api_app_id": "A_APP",
+  "token": "verification-token",
+  "container": {
+    "type": "message",
+    "message_ts": "1700000000.000200",
+    "channel_id": "D_DM_CHANNEL",
+    "is_ephemeral": false
+  },
+  "trigger_id": "trigger-id",
+  "team": {
+    "id": "T_TEAM",
+    "domain": "example"
+  },
+  "channel": {
+    "id": "D_DM_CHANNEL",
+    "name": "directmessage"
+  },
+  "message_ts": "1700000000.000200",
+  "actions": [
+    {
+      "action_id": "mcp-socd.deny",
+      "block_id": "mcp-socd-actions",
+      "type": "button",
+      "value": "req-deny-test",
+      "action_ts": "1700000011.000000"
+    }
+  ]
+}

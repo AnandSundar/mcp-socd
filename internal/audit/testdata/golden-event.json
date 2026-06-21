@@ -1,0 +1,29 @@
+{
+  "class_uid": 2004,
+  "class_name": "Detection Finding",
+  "activity_id": 1,
+  "time": "2026-06-20T12:00:00Z",
+  "metadata": {
+    "version": "1.2.0",
+    "product": {
+      "name": "mcp-socd",
+      "vendor_name": "mcp-socd",
+      "version": "v1.2.3 (commit: abc1234, built: 2026-06-20T12:00:00Z)"
+    }
+  },
+  "severity_id": 4,
+  "message": "isolate_endpoint against server99.example.com",
+  "finding_info": {
+    "uid": "allow-isolate-server99",
+    "title": "isolate_endpoint against server99.example.com",
+    "types": ["soc-action", "isolation"]
+  },
+  "verdict": "Deny",
+  "verdict_id": 2,
+  "policy_version": 7,
+  "request_id": "req-abc",
+  "resources": [{"type": "MCP Tool", "name": "isolate_endpoint"}],
+  "actor": {"user": {"name": "agent-user@home"}},
+  "approver": "",
+  "error_reason": ""
+}

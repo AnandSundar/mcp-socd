@@ -1,0 +1,85 @@
+# mcp-socd custom actions catalog (example).
+#
+# Load at startup with --custom-actions /path/to/this.yaml. Hot-reloaded
+# on SIGHUP. Each action is validated against the same contract as a
+# starter action (see internal/catalog/types.go).
+#
+# The starter catalog ships with 5 actions:
+#   submit_edr_query, enrich_ioc, rotate_api_key, block_user_account,
+#   isolate_endpoint
+# Adding one with the same name as a starter is rejected; remove the
+# starter first if you intend to replace it.
+
+actions:
+  # Example: post a Slack message into an incident channel. Read-only
+  # from the SOC's perspective (no state change), so blast_radius = 1.
+  - name: post_slack_message
+    description: |
+      Post a message to a Slack channel via the bot token configured
+      for this proxy. Used by agents to notify on-call of escalation.
+    params:
+      - name: channel
+        type: string
+        description: Slack channel ID (C…) or name (#incident).
+        required: true
+      - name: text
+        type: string
+        description: Message body. Plain text; supports mrkdwn.
+        required: true
+    blast_radius: 1
+    primary_arg: channel
+    ocsf_audit_shape:
+      title: "post_slack_message to {{.target}}"
+      severity_id: 1
+      types:
+        - soc-action
+        - notification
+    input_schema: |
+      {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "channel": {"type": "string", "minLength": 1},
+          "text":    {"type": "string", "minLength": 1, "maxLength": 40000}
+        },
+        "required": ["channel", "text"]
+      }
+
+  # Example: update a Jira ticket. Soft action (reversible).
+  - name: update_jira_ticket
+    description: |
+      Add a comment to or transition a Jira ticket. Reversible by
+      editing the ticket back, so blast_radius = 3.
+    params:
+      - name: ticket_key
+        type: string
+        description: Jira ticket key (e.g. SOC-1234).
+        required: true
+      - name: action
+        type: string
+        description: One of "comment" or "transition".
+        required: true
+      - name: body
+        type: string
+        description: Comment text or transition target status.
+    blast_radius: 3
+    primary_arg: ticket_key
+    ocsf_audit_shape:
+      title: "update_jira_ticket on {{.target}}"
+      severity_id: 3
+      types:
+        - soc-action
+        - ticket-update
+    input_schema: |
+      {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "ticket_key": {"type": "string", "pattern": "^[A-Z][A-Z0-9]+-\\d+$"},
+          "action":     {"type": "string", "enum": ["comment", "transition"]},
+          "body":       {"type": "string"}
+        },
+        "required": ["ticket_key", "action"]
+      }

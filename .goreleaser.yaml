@@ -1,16 +1,19 @@
 # GoReleaser config for mcp-socd. See https://goreleaser.com/customization/build/
+#
 # Distribution targets:
 #   - GitHub Release: source archives + binaries for linux/darwin/windows x amd64/arm64
-#   - Homebrew tap: mcp-socd formula
-#   - Scoop bucket: mcp-socd manifest
-#   - Static tarball with sha256 checksums
+#   - linux/musl variant for Alpine compatibility
+#   - Homebrew tap: mcp-socd formula (skeleton; goreleaser fills in at release time)
+#   - Scoop bucket: mcp-socd manifest (skeleton; goreleaser fills in at release time)
+#   - Static tarball/zip with sha256 checksums
+#   - nfpm deb/rpm packages for homelab convenience
 version: 2
 
 project_name: mcp-socd
 
 before:
   hooks:
-    - go mod tidy
+    - go mod download
 
 builds:
   - id: mcp-socd
@@ -34,26 +37,106 @@ builds:
     ldflags:
       - -s -w
       - -X mcp-socd/internal/version.Version={{.Version}}
-      - -X mcp-socd/internal/version.Commit={{.ShortCommit}}
+      - -X mcp-socd/internal/version.Commit={{.Commit}}
+      - -X mcp-socd/internal/version.BuildDate={{.Date}}
+
+  - id: mcp-socd-musl
+    main: ./cmd/mcp-socd
+    binary: mcp-socd
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+    goarch:
+      - amd64
+      - arm64
+    mod_timestamp: "{{ .CommitTimestamp }}"
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w
+      - -X mcp-socd/internal/version.Version={{.Version}}
+      - -X mcp-socd/internal/version.Commit={{.Commit}}
       - -X mcp-socd/internal/version.BuildDate={{.Date}}
 
 archives:
   - id: default
+    ids:
+      - mcp-socd
     formats: [tar.gz]
-    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    name_template: >-
+      {{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}
+      {{- if .Arm }}v{{ .Arm }}{{ end }}
+      {{- if .Mips }}_{{ .Mips }}{{ end }}
+      {{- if not .Amd64 }}_{{ .Arch }}{{ end }}
     files:
-      - LICENSE
       - README.md
+      - LICENSE
+      - config.example.yaml
     format_overrides:
       - goos: windows
         formats: [zip]
 
+  - id: musl
+    ids:
+      - mcp-socd-musl
+    formats: [tar.gz]
+    name_template: >-
+      {{ .ProjectName }}_{{ .Version }}_linux_musl
+      {{- if eq .Arch "arm64" }}{{ else }}_{{ .Arch }}{{ end }}
+    files:
+      - README.md
+      - LICENSE
+      - config.example.yaml
+
+nfpms:
+  - id: packages
+    package_name: mcp-socd
+    ids:
+      - mcp-socd
+    file_name_template: "{{ .ConventionalFileName }}"
+    formats:
+      - deb
+      - rpm
+
+brews:
+  - name: mcp-socd
+    tap:
+      owner: mcp-socd
+      repository: homebrew-tap
+    folder: Formula
+    homepage: https://github.com/mcp-socd/mcp-socd
+    description: "MCP-aware security proxy for SOC teams"
+    license: "Apache-2.0"
+    dependencies: []
+    test: |
+      system "#{bin}/mcp-socd --version"
+    install: |
+      bin.install "mcp-socd"
+      # manpage and completions are generated post-install; uncomment when present.
+      # man1.install "man/mcp-socd.1"
+      # bash_completion.install "completions/mcp-socd.bash" => "mcp-socd"
+      # zsh_completion.install "_mcp-socd"
+      # fish_completion.install "mcp-socd.fish"
+
+scoops:
+  - name: mcp-socd
+    bucket:
+      owner: mcp-socd
+      name: scoop-bucket
+    folder: bucket
+    homepage: https://github.com/mcp-socd/mcp-socd
+    description: "MCP-aware security proxy for SOC teams"
+    license: "Apache-2.0"
+    url_template: "https://github.com/mcp-socd/mcp-socd/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
+    # url, version, hash, and bin are emitted by goreleaser at release time.
+
 checksum:
-  name_template: "{{ .ProjectName }}_{{ .Version }}_checksums.txt"
+  name_template: "{{ .ProjectName }}_{{ .Version }}_SHA256SUMS"
   algorithm: sha256
 
 snapshot:
-  version_template: "{{ .ShortCommit }}"
+  version_template: "{{ .Version }}-next"
 
 changelog:
   use: git
@@ -64,27 +147,9 @@ changelog:
       - "^test:"
       - "^chore:"
 
-brews:
-  - repository:
-      owner: mcp-socd
-      name: homebrew-tap
-    homepage: https://github.com/mcp-socd/mcp-socd
-    description: "MCP-aware security proxy for SOC teams"
-    license: "Apache-2.0"
-    test: |
-      system "#{bin}/mcp-socd --version"
-
-scoops:
-  - repository:
-      owner: mcp-socd
-      name: scoop-bucket
-    homepage: https://github.com/mcp-socd/mcp-socd
-    description: "MCP-aware security proxy for SOC teams"
-    license: "Apache-2.0"
-
 release:
   github:
     owner: mcp-socd
     name: mcp-socd
+  draft: true
   prerelease: auto
-  draft: false

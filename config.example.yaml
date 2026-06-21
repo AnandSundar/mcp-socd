@@ -1,0 +1,112 @@
+# mcp-socd example configuration.
+#
+# Copy this file to the platform's config path:
+#   Linux:   $XDG_CONFIG_HOME/mcp-socd/config.yaml  (default ~/.config/mcp-socd/)
+#   macOS:   ~/Library/Application Support/mcp-socd/config.yaml
+#   Windows: %LOCALAPPDATA%\mcp-socd\config.yaml
+# Or pass --config /path/to/config.yaml at startup.
+#
+# Field semantics are documented in docs/policy-schema.md (lands with U11).
+
+version: 1
+
+# --- Upstream MCP server ------------------------------------------------------
+# mcp-socd is a stdio proxy: it spawns this command and forwards JSON-RPC
+# frames between the agent and the child process. The first element is the
+# executable; remaining elements are argv.
+upstream:
+  command:
+    - npx
+    - "-y"
+    - "@modelcontextprotocol/server-filesystem"
+    - /var/soc/readonly
+  env:
+    # Extra env passed to the child. Inherits the proxy's env unless overridden.
+    LOG_LEVEL: info
+
+# --- Policy -------------------------------------------------------------------
+# default_action: what to do when no rule matches. Per Plan R1, "deny"
+# is the only safe choice for production. "allow" exists for homelab.
+policy:
+  default_action: deny
+  rules:
+    # Allow read-only IOC enrichment against the catalog starter action.
+    - id: allow-enrich-ioc
+      tool: "enrich_ioc"
+      action: allow
+
+    # Read-only EDR query — always allowed.
+    - id: allow-edr-query
+      tool: "submit_edr_query"
+      action: allow
+
+    # Isolate an allowlisted host only with explicit out-of-band approval.
+    # Glob targets match against the action's primary argument.
+    - id: approve-isolate-allowlist
+      tool: "isolate_endpoint"
+      targets:
+        - "*.test.lab"
+        - "server99.example.com"
+      action: require_approval
+      approval_channel: terminal
+      approval_timeout_seconds: 600
+
+    # Block a user — always requires approval, longer timeout for after-hours.
+    - id: approve-block-user
+      tool: "block_user_account"
+      action: require_approval
+      approval_timeout_seconds: 900
+
+    # Catch-all for anything else: default-deny is enforced above, but
+    # listing the destructive verbs here makes the intent explicit.
+    - id: deny-destructive-catchall
+      tool: "rotate_api_key"
+      action: require_approval
+
+# --- Approval workflow --------------------------------------------------------
+approval:
+  # Per-request timeout. Defaults to 300s. 0 = use default.
+  timeout_seconds: 300
+  channels:
+    # First channel: interactive terminal prompt (great for local dev).
+    - type: terminal
+
+    # Second channel: Slack via Socket Mode. Tokens are loaded from env so
+    # the YAML stays free of secrets.
+    - type: slack
+      bot_token: "${SLACK_BOT_TOKEN}"
+      app_token: "${SLACK_APP_TOKEN}"
+      approver_user_id: "U07ABCDEF"
+      # signing_secret is loaded from the env var named below.
+      signing_secret_env: "SLACK_SIGNING_SECRET"
+
+# --- Audit emission -----------------------------------------------------------
+# OCSF 1.8.0 Detection Finding (class_uid 2004) records. SIEM-friendly.
+audit:
+  # Emit JSON-lines to stdout. Default false (records go to stderr to keep
+  # the proxy's MCP stdout channel pure).
+  stdout: false
+
+  # Secondary sink. Append-only JSON-lines; fsync'd after every event.
+  file: /var/log/mcp-socd/audit.ndjson
+
+  # Heartbeat every N seconds when idle. 0 disables. Default 60.
+  heartbeat_seconds: 60
+
+# --- Extending the catalog (custom actions) -----------------------------------
+# The starter catalog ships with 5 actions. To add your own (e.g. a Slack
+# message-send action, a ticket-update action), create a YAML file in the
+# shape of custom_actions.example.yaml at the repo root and pass it via
+# --custom-actions /etc/mcp-socd/custom_actions.yaml. The CLI loads it on
+# startup and on SIGHUP.
+
+# --- Backend (lands with U8) --------------------------------------------------
+# When the Falcon backend lands, a `backend:` section will look like:
+#
+#   backend:
+#     name: falcon
+#     cloud: us-1
+#     client_id_env: FALCON_CLIENT_ID
+#     client_secret_env: FALCON_CLIENT_SECRET
+#
+# It is intentionally absent here because the current binary ignores it.

@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <script
+      src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"
+      integrity="sha384-sG0Hv1tP1lZCk9KQmrIbY/XNwi+OY84GQqhMscbnsoBFqAz8KNCil1kvfL3Hbbk2"
+      crossorigin="anonymous"
+    ></script>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body {
+        margin: 0;
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background: #0a0a0a;
+        font-family: "JetBrains Mono", "Menlo", "Consolas", monospace;
+        color: #fafafa;
+      }
+      .clip {
+        position: absolute;
+        left: 0; top: 0;
+        width: 1920px;
+        height: 1080px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 80px 140px;
+        text-align: center;
+      }
+      .center-col { flex-direction: column; gap: 36px; }
+      .small { font-size: 44px; line-height: 1.35; color: #fafafa; font-weight: 500; }
+      .muted { color: #71717a; }
+      .destructive { color: #ff4d4d; }
+      .safe { color: #4ade80; }
+      .terminal {
+        background: #000;
+        border: 1px solid #2a2a2a;
+        border-radius: 18px;
+        padding: 56px 72px;
+        font-size: 26px;
+        line-height: 1.55;
+        text-align: left;
+        width: 100%;
+        max-width: 1400px;
+        font-family: "JetBrains Mono", monospace;
+        color: #d4d4d8;
+        white-space: pre-wrap;
+        align-self: center;
+      }
+      .terminal .term-line { opacity: 0; }
+      .terminal .term-prompt { color: #4ade80; }
+      .terminal .term-dim { color: #71717a; }
+      .terminal .term-red { color: #ff4d4d; font-weight: 600; }
+      .terminal .term-yellow { color: #facc15; }
+      .wordmark {
+        font-size: 152px;
+        font-weight: 700;
+        letter-spacing: -4px;
+      }
+      .tagline { font-size: 52px; font-weight: 500; }
+      .url { font-size: 30px; color: #71717a; margin-top: 24px; font-weight: 400; }
+      .hook-text {
+        font-size: 76px;
+        line-height: 1.2;
+        font-weight: 600;
+      }
+      .problem-row {
+        font-size: 40px;
+        line-height: 1.4;
+        font-weight: 500;
+      }
+    </style>
+  </head>
+  <body>
+    <div
+      id="root"
+      data-composition-id="teaser-16x9"
+      data-start="0"
+      data-duration="30"
+      data-width="1920"
+      data-height="1080"
+    >
+
+      <!-- ===== Scene 1: Hook (0-3s) ===== -->
+      <div id="s1" class="clip" data-start="0" data-duration="3" data-track-index="1">
+        <div class="center-col">
+          <div id="s1-line" class="hook-text" style="opacity:0">
+            Your AI agent just <span id="s1-isolated" class="destructive">isolated</span> a domain controller.
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== Scene 2: Failure beats (3-8s) ===== -->
+      <div id="s2" class="clip" data-start="3" data-duration="5" data-track-index="1">
+        <div class="center-col">
+          <div id="s2-b1" class="problem-row" style="opacity:0">Agents in production. Acting on credentials.</div>
+          <div id="s2-b2" class="problem-row" style="opacity:0">
+            <span class="muted">Output guardrails</span> don't stop the tool call.
+          </div>
+          <div id="s2-b3" class="problem-row" style="opacity:0">
+            <span class="muted">Observability</span> is post-hoc.
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== Scene 3: The gap (8-11s) ===== -->
+      <div id="s3" class="clip" data-start="8" data-duration="3" data-track-index="1">
+        <div class="center-col">
+          <div id="s3-line" class="hook-text" style="opacity:0">
+            The gap is at the <span class="destructive">action layer</span>.
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== Scene 4: Brand intro (11-14s) ===== -->
+      <div id="s4" class="clip" data-start="11" data-duration="3" data-track-index="1">
+        <div class="center-col">
+          <div id="s4-mark" class="wordmark" style="opacity:0">mcp-socd</div>
+          <div id="s4-tag" class="tagline" style="opacity:0">
+            <span class="safe">default-deny</span> for AI agents.
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== Scene 5: Terminal demo (14-25s) ===== -->
+      <div id="s5" class="clip" data-start="14" data-duration="11" data-track-index="1">
+        <div class="center-col">
+          <div class="terminal" id="s5-term">
+            <div class="term-line" id="t-line-0"><span class="term-dim">$ mcp-socd -- falcon-mcp</span></div>
+            <div class="term-line" id="t-line-1">mcp-socd 0.1.0</div>
+            <div class="term-line" id="t-line-2">  <span class="term-dim">upstream:</span>  falcon-mcp    <span class="term-dim">audit:</span>  stderr</div>
+            <div class="term-line" id="t-line-3">&nbsp;</div>
+            <div class="term-line" id="t-line-4"><span class="term-prompt">&gt;</span> agent → <span class="term-dim">isolate_endpoint</span> <span class="term-dim">host=dc01.corp</span></div>
+            <div class="term-line" id="t-line-5"><span class="term-dim">catalog:</span>   blast_radius=5 / isolate_endpoint</div>
+            <div class="term-line" id="t-line-6"><span class="term-dim">policy:</span>    <span class="term-red">deny</span> (no allowlist match)</div>
+            <div class="term-line" id="t-line-7"><span class="term-dim">approval:</span>  <span class="term-yellow">pending Slack @secops</span></div>
+            <div class="term-line" id="t-line-8"><span class="term-dim">audit:</span>     OCSF 2004 verdict=awaiting_approval</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== Scene 6: Close (25-30s) ===== -->
+      <div id="s6" class="clip" data-start="25" data-duration="5" data-track-index="1">
+        <div class="center-col">
+          <div id="s6-mark" class="wordmark" style="opacity:0">mcp-socd</div>
+          <div id="s6-tag" class="tagline" style="opacity:0">
+            <span>default-deny.</span> <span class="safe">in production.</span>
+          </div>
+          <div id="s6-url" class="url" style="opacity:0">github.com/AnandSundar/mcp-socd</div>
+        </div>
+      </div>
+
+    </div>
+
+    <script>
+      window.__timelines = window.__timelines || {};
+      const tl = gsap.timeline({ paused: true });
+
+      // ----- Scene 1: Hook (0-3s) -----
+      tl.fromTo("#s1", { opacity: 0 }, { opacity: 1, duration: 0.3 }, 0);
+      tl.fromTo("#s1-line", { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.4, ease: "power2.out" }, 0.2);
+      tl.fromTo("#s1-isolated", { scale: 0.7, transformOrigin: "50% 50%" }, { scale: 1.0, duration: 0.01 }, 0.2);
+      tl.to("#s1-isolated", { scale: 1.18, duration: 0.22, ease: "power2.out" }, 0.7);
+      tl.to("#s1-isolated", { scale: 1.0, duration: 0.18, ease: "power2.in" }, 0.92);
+      tl.to("#s1", { opacity: 0, duration: 0.3 }, 2.7);
+      tl.set("#s1", { opacity: 0 }, 3.0);
+
+      // ----- Scene 2: Failure beats (3-8s) - rapid montage -----
+      tl.fromTo("#s2", { opacity: 0 }, { opacity: 1, duration: 0.3 }, 3.0);
+      tl.fromTo("#s2-b1", { opacity: 0, x: -30 }, { opacity: 1, x: 0, duration: 0.35, ease: "power2.out" }, 3.2);
+      tl.to("#s2-b1", { opacity: 0, y: -8, duration: 0.25 }, 4.3);
+      tl.fromTo("#s2-b2", { opacity: 0, x: -30 }, { opacity: 1, x: 0, duration: 0.35, ease: "power2.out" }, 4.5);
+      tl.to("#s2-b2", { opacity: 0, y: -8, duration: 0.25 }, 5.6);
+      tl.fromTo("#s2-b3", { opacity: 0, x: -30 }, { opacity: 1, x: 0, duration: 0.35, ease: "power2.out" }, 5.8);
+      tl.to("#s2", { opacity: 0, duration: 0.3 }, 7.7);
+      tl.set("#s2", { opacity: 0 }, 8.0);
+
+      // ----- Scene 3: The gap (8-11s) -----
+      tl.fromTo("#s3", { opacity: 0 }, { opacity: 1, duration: 0.3 }, 8.0);
+      tl.fromTo("#s3-line", { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.45, ease: "power2.out" }, 8.3);
+      tl.to("#s3", { opacity: 0, duration: 0.3 }, 10.7);
+      tl.set("#s3", { opacity: 0 }, 11.0);
+
+      // ----- Scene 4: Brand intro (11-14s) -----
+      tl.fromTo("#s4", { opacity: 0 }, { opacity: 1, duration: 0.3 }, 11.0);
+      tl.fromTo("#s4-mark", { opacity: 0, scale: 0.5, transformOrigin: "50% 50%" }, { opacity: 1, scale: 1.0, duration: 0.5, ease: "back.out(1.4)" }, 11.2);
+      tl.fromTo("#s4-tag", { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.4, ease: "power2.out" }, 12.1);
+      tl.to("#s4", { opacity: 0, duration: 0.3 }, 13.7);
+      tl.set("#s4", { opacity: 0 }, 14.0);
+
+      // ----- Scene 5: Terminal demo (14-25s) - lines fade in one by one -----
+      const termLines = [
+        { id: "t-line-0", at: 14.0 },
+        { id: "t-line-1", at: 14.7 },
+        { id: "t-line-2", at: 15.4 },
+        { id: "t-line-3", at: 16.4 },
+        { id: "t-line-4", at: 16.7 },
+        { id: "t-line-5", at: 18.2 },
+        { id: "t-line-6", at: 19.7 },
+        { id: "t-line-7", at: 21.0 },
+        { id: "t-line-8", at: 22.3 },
+      ];
+      termLines.forEach((line) => {
+        tl.fromTo("#" + line.id, { opacity: 0 }, { opacity: 1, duration: 0.18 }, line.at);
+      });
+      tl.fromTo("#s5", { opacity: 0 }, { opacity: 1, duration: 0.3 }, 14.0);
+      tl.to("#s5", { opacity: 0, duration: 0.3 }, 24.7);
+      tl.set("#s5", { opacity: 0 }, 25.0);
+
+      // ----- Scene 6: Close (25-30s) -----
+      tl.fromTo("#s6", { opacity: 0 }, { opacity: 1, duration: 0.3 }, 25.0);
+      tl.fromTo("#s6-mark", { opacity: 0, scale: 0.6, transformOrigin: "50% 50%" }, { opacity: 1, scale: 1.0, duration: 0.5, ease: "back.out(1.4)" }, 25.2);
+      tl.fromTo("#s6-tag", { opacity: 0 }, { opacity: 1, duration: 0.4 }, 26.1);
+      tl.fromTo("#s6-url", { opacity: 0 }, { opacity: 1, duration: 0.4 }, 27.0);
+
+      window.__timelines["teaser-16x9"] = tl;
+    </script>
+  </body>
+</html>

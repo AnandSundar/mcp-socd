@@ -1,0 +1,46 @@
+# Binaries
+/bin/
+/dist/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binaries / coverage
+*.test
+*.out
+coverage.html
+coverage.txt
+
+# Go workspace
+go.work
+go.work.sum
+
+# Dependency caches
+/vendor/
+
+# Local config overrides
+.env
+.env.local
+config.local.yaml
+config.local.yml
+
+# Audit logs (downstream SIEM owns retention)
+*.audit.ndjson
+audit.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local secrets (operator should never commit these)
+/secrets/
+*.pem
+*.key

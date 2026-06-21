@@ -1,0 +1,32 @@
+name: quarantine_mailbox
+description: |
+  Quarantine a user's mailbox by moving all inbound mail to the
+  spam folder for a bounded time window. Reversible by clearing the
+  quarantine flag.
+params:
+  - name: user_email
+    type: string
+    description: User's primary email address.
+    required: true
+  - name: duration_hours
+    type: integer
+    description: Quarantine duration in hours.
+    required: true
+blast_radius: 4
+ocsf_audit_shape:
+  title: "quarantine_mailbox against {{.target}}"
+  severity_id: 4
+  types:
+    - soc-action
+    - mailbox-quarantine
+input_schema: |
+  {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "user_email":     {"type": "string", "format": "email"},
+      "duration_hours": {"type": "integer", "minimum": 1, "maximum": 720}
+    },
+    "required": ["user_email", "duration_hours"]
+  }

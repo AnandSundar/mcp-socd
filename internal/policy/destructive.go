@@ -1,6 +1,11 @@
 package policy
 
-import "strings"
+import (
+	"strings"
+	"unicode"
+
+	"golang.org/x/text/unicode/norm"
+)
 
 // DestructiveVerbs is the canonical list of action verbs the proxy
 // intercepts regardless of catalog membership, per Plan R7. The list
@@ -37,10 +42,13 @@ const verbSeparator = "_-. \t"
 // gate is meant to catch known-dangerous action patterns, not to
 // flag every tool that happens to contain the letters "del".
 //
-// Matching is case-insensitive. Returns true if any verb is found
-// preceded by either the start of the string or a non-separator
-// rune AND followed by either the end of the string or a
-// non-separator rune.
+// Matching is case-insensitive (Unicode-aware) and homoglyph-safe:
+// the tool name is NFKC-normalized before matching so that
+// Cyrillic 'е' (U+0435) in a tool name like "Dеlete_file" is
+// folded to Latin 'e' and still triggers the gate. Word-boundary
+// checks operate on runes, not bytes, so multi-byte UTF-8
+// characters adjacent to a verb do not produce a false negative
+// (or false positive) on the boundary test.
 //
 // Examples:
 //
@@ -49,71 +57,89 @@ const verbSeparator = "_-. \t"
 //	IsDestructiveTool("truncate")      -> true  (exact match)
 //	IsDestructiveTool("truncate-table") -> true
 //	IsDestructiveTool("deletedata")    -> false (no boundary after delete)
+//	IsDestructiveTool("Dеlete_file")   -> true  (Cyrillic 'е' folded to 'e')
 //	IsDestructiveTool("submit_edr_query") -> false
 //	IsDestructiveTool("isolate_endpoint") -> false
 func IsDestructiveTool(tool string) bool {
-	if tool == "" {
-		return false
-	}
-	lower := strings.ToLower(tool)
-	for _, verb := range DestructiveVerbs {
-		if containsWord(lower, verb) {
-			return true
-		}
-	}
-	return false
+	verb, _ := firstDestructiveVerb(tool)
+	return verb != ""
 }
 
 // DestructiveVerbInTool returns the first destructive verb found in
 // tool (lowercased), or "" if none. Exposed for audit metadata so
 // post-hoc analysts can see exactly which verb triggered the gate.
 func DestructiveVerbInTool(tool string) string {
-	if tool == "" {
-		return ""
-	}
-	lower := strings.ToLower(tool)
-	for _, verb := range DestructiveVerbs {
-		if containsWord(lower, verb) {
-			return verb
-		}
-	}
-	return ""
+	verb, _ := firstDestructiveVerb(tool)
+	return verb
 }
 
-// containsWord reports whether needle appears in haystack at a
-// word boundary. Both are expected to be lowercase.
-//
-// A match is at a word boundary when the rune immediately before
-// the match is either the start of the string or a separator
-// ("_-. \t"), AND the rune immediately after the match is either
-// the end of the string or a separator. This matches the common
-// snake_case and kebab-case MCP tool naming conventions without
-// false-positive substring matches like "deletedata".
-func containsWord(haystack, needle string) bool {
+// firstDestructiveVerb returns the first destructive verb found in
+// tool, along with the normalized form of tool. Both are useful:
+// verb for the audit field, normalized for downstream consumers
+// (audit, allowlist matching) that need a canonical representation
+// of the tool name.
+func firstDestructiveVerb(tool string) (verb, normalized string) {
+	if tool == "" {
+		return "", ""
+	}
+	// NFKC normalizes homoglyphs (Cyrillic 'е' -> Latin 'e'),
+	// combining characters, and other Unicode trickery. After
+	// normalization, strings.ToLower gives a stable ASCII-folded
+	// view. We then work in runes to keep boundary checks correct
+	// across multi-byte UTF-8.
+	normalized = norm.NFKC.String(tool)
+	lower := strings.ToLower(normalized)
+	runes := []rune(lower)
+	for _, v := range DestructiveVerbs {
+		if containsWordRunes(runes, v) {
+			return v, normalized
+		}
+	}
+	return "", normalized
+}
+
+// containsWordRunes reports whether needle (ASCII lowercase verb)
+// appears in runes (already lowercased) at a word boundary. Working
+// in runes ensures the boundary check is correct for multi-byte
+// UTF-8 sequences adjacent to a verb match.
+func containsWordRunes(runes []rune, needle string) bool {
 	if needle == "" {
 		return false
 	}
-	idx := 0
-	for {
-		j := strings.Index(haystack[idx:], needle)
-		if j < 0 {
-			return false
+	needles := []rune(needle)
+	n := len(needles)
+	if n > len(runes) {
+		return false
+	}
+	for i := 0; i+n <= len(runes); i++ {
+		// Fast path: compare rune-by-rune.
+		match := true
+		for k := 0; k < n; k++ {
+			if runes[i+k] != needles[k] {
+				match = false
+				break
+			}
 		}
-		start := idx + j
-		end := start + len(needle)
-
-		leftOK := start == 0 || isSeparator(rune(haystack[start-1]))
-		rightOK := end == len(haystack) || isSeparator(rune(haystack[end]))
-
+		if !match {
+			continue
+		}
+		leftOK := i == 0 || isSeparator(runes[i-1])
+		rightOK := i+n == len(runes) || isSeparator(runes[i+n])
 		if leftOK && rightOK {
 			return true
 		}
-		idx = start + 1
 	}
+	return false
 }
 
 // isSeparator reports whether r is a word-boundary rune for the
 // purposes of verb detection.
 func isSeparator(r rune) bool {
-	return strings.ContainsRune(verbSeparator, r)
+	// Fast ASCII path — verbSeparator is all ASCII.
+	if r <= 0x7E {
+		return strings.IndexByte(verbSeparator, byte(r)) >= 0
+	}
+	// Allow any Unicode whitespace (NBSP, ideographic space, etc.)
+	// as a boundary, in addition to the ASCII separator set.
+	return unicode.IsSpace(r)
 }

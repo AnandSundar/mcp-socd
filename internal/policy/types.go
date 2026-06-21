@@ -162,7 +162,13 @@ type Policy struct {
 
 	// CatchAll is the synthetic destructive-verb catch-all rule. It
 	// is the last rule Evaluate considers; it never replaces an
-	// explicit rule's match.
+	// explicit rule's match. Its Decision is an invariant
+	// (always DecisionRequireApproval for destructive tools) and
+	// Evaluate does not consult it for the gate decision — the
+	// gate is hard-coded. CatchAll is retained on Policy for
+	// audit surfacing and for backwards-compatibility with the
+	// original model; mutating its Decision at runtime has no
+	// effect on the gate.
 	CatchAll CompiledRule
 }
 

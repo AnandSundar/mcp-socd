@@ -201,6 +201,115 @@ func TestEngine_CatchAllDestructive(t *testing.T) {
 	}
 }
 
+// TestEngine_CatchAllInvariant — even if a buggy loader mutates
+// CatchAll.Decision to anything other than DecisionRequireApproval,
+// the destructive-verb gate MUST still fire. This is the regression
+// test for the fail-open state-drift flagged in the security
+// review: the gate is hard-coded in Evaluate, not a switch on
+// CatchAll.Decision.
+func TestEngine_CatchAllInvariant(t *testing.T) {
+	p := mustCompile(t, &config.Policy{
+		DefaultAction: "allow",
+		Rules:         nil,
+	})
+	// Simulate a buggy loader that flipped CatchAll.Decision.
+	p.CatchAll.Decision = DecisionAllow
+	e := New(p)
+
+	// truncate_table MUST still require approval.
+	got := e.Evaluate(Call{Tool: "truncate_table"})
+	if got != DecisionRequireApproval {
+		t.Fatalf("CatchAll.Decision mutation leaked: got %v, want DecisionRequireApproval", got)
+	}
+	// Even DecisionDeny must not let the gate disable.
+	p.CatchAll.Decision = DecisionDeny
+	got = e.Evaluate(Call{Tool: "drop_table"})
+	if got != DecisionRequireApproval {
+		t.Fatalf("CatchAll.Decision=DecisionDeny leaked: got %v, want DecisionRequireApproval", got)
+	}
+}
+
+// TestEngine_RejectsNonASCIIToolName — defense against homoglyph
+// attacks. A tool name containing non-ASCII letters (e.g. Cyrillic
+// 'е' in "Dеlete_user") MUST be rejected regardless of what rules
+// match it. Without this check, an operator's wildcard allow rule
+// (e.g. `delete_*`) would let a homoglyph attack through. NFKC
+// does not fold cross-script homoglyphs, so the only safe defense
+// is to require printable-ASCII tool names.
+func TestEngine_RejectsNonASCIIToolName(t *testing.T) {
+	// Even with default_action=allow and an explicit wildcard
+	// allow rule that would otherwise match, the homoglyph attack
+	// must be denied.
+	p := mustCompile(t, &config.Policy{
+		DefaultAction: "allow",
+		Rules: []config.Rule{
+			{
+				ID:     "allow-delete-wildcard",
+				Tool:   "delete_*",
+				Action: "allow",
+			},
+		},
+	})
+	e := New(p)
+
+	cases := []struct {
+		name string
+		tool string
+	}{
+		{"cyrillic_e", "Dеlete_user"},          // Cyrillic 'е' (U+0435)
+		{"cyrillic_e_in_truncate", "truncаte"}, // Cyrillic 'а' (U+0430)
+		{"greek_alpha", "α"},                   // pure Greek
+		{"cjk", "隔离_endpoint"},                 // CJK
+		{"space_in_tool", "delete user"},       // space (not printable for our purposes)
+		{"empty_tool", ""},                     // empty is malformed
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := e.Evaluate(Call{Tool: tc.tool})
+			if got != DecisionDeny {
+				t.Errorf("Evaluate(Tool=%q) = %v, want DecisionDeny (homoglyph defense)", tc.tool, got)
+			}
+		})
+	}
+}
+
+// TestEngine_AllowsLegitimateASCIITools — regression test that
+// the ASCII-only invariant does not over-reject legitimate ASCII
+// tool names that include numbers or unusual separators. The catch-
+// all rule uses "**" (matches across segment separators) since
+// gobwas/glob treats "*" as single-segment only.
+func TestEngine_AllowsLegitimateASCIITools(t *testing.T) {
+	p := mustCompile(t, &config.Policy{
+		DefaultAction: "deny",
+		Rules: []config.Rule{
+			{
+				ID:     "allow-readonly",
+				Tool:   "**",
+				Action: "allow",
+			},
+		},
+	})
+	e := New(p)
+
+	cases := []string{
+		"submit_edr_query",
+		"isolate_endpoint",
+		"block-user-account", // kebab-case
+		"rotate.api.key",     // dots (covered by **)
+		"tool123",            // digits
+		"x",                  // single char
+		"FOO_BAR",            // uppercase
+	}
+	for _, tool := range cases {
+		t.Run(tool, func(t *testing.T) {
+			got := e.Evaluate(Call{Tool: tool})
+			if got != DecisionAllow {
+				t.Errorf("Evaluate(Tool=%q) = %v, want DecisionAllow", tool, got)
+			}
+		})
+	}
+}
+
 // TestEngine_DefaultDeny_DefaultPolicy — without a configured rule
 // the proxy default-denies per Plan R1.
 func TestEngine_DefaultDeny_DefaultPolicy(t *testing.T) {

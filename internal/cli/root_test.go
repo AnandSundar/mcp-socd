@@ -83,3 +83,38 @@ func TestRootCmd_UnknownFlagReturnsError(t *testing.T) {
 		t.Error("expected error for unknown flag, got nil")
 	}
 }
+
+// TestWarnDefaultAllow_Text — the loud startup warning emitted
+// when the operator sets policy.default_action to "allow" must
+// mention the risk, the homelab/testing scope, and the fact that
+// destructive tools are still intercepted. The warning is the
+// loudness signal that Plan R1 requires; if this test fails, an
+// operator could ship default-allow to production without
+// noticing.
+func TestWarnDefaultAllow_Text(t *testing.T) {
+	var buf bytes.Buffer
+	warnDefaultAllow(&buf)
+
+	out := buf.String()
+	wantSubstrings := []string{
+		"WARNING",
+		"default_action",
+		"allow",
+		"homelab/testing",
+		"Destructive-verb",
+	}
+	for _, want := range wantSubstrings {
+		if !strings.Contains(out, want) {
+			t.Errorf("warnDefaultAllow output missing %q:\n%s", want, out)
+		}
+	}
+	// The warning should be visually loud — multi-line, with the
+	// ▓▓▓ marker on each line.
+	if !strings.Contains(out, "▓▓▓") {
+		t.Error("warnDefaultAllow output is not visually loud (missing ▓▓▓ marker)")
+	}
+	lines := strings.Split(strings.TrimSpace(out), "\n")
+	if len(lines) < 4 {
+		t.Errorf("warnDefaultAllow output is too short to be loud: %d lines", len(lines))
+	}
+}

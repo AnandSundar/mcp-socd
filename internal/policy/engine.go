@@ -91,6 +91,18 @@ func (e *Engine) Evaluate(call Call) Decision {
 		return DecisionDeny
 	}
 
+	// Phase 0: ASCII-only tool name validation. Defends against
+	// homoglyph attacks where a non-ASCII letter (e.g. Cyrillic
+	// 'е' / U+0435) is used to spell a verb that a glob rule
+	// matches (e.g. operator wrote `delete_*` allow rule,
+	// attacker sends `Dеlete_user`). NFKC normalization does NOT
+	// fold cross-script homoglyphs; the only safe defense is to
+	// reject non-ASCII tool names outright. MCP tool identifiers
+	// in practice are printable ASCII (snake_case or kebab-case).
+	if !isASCIIPrintable(call.Tool) {
+		return DecisionDeny
+	}
+
 	// Phase 1: explicit rules, sorted most-specific first.
 	for i := range p.Rules {
 		if ruleMatches(&p.Rules[i], call) {
@@ -99,14 +111,39 @@ func (e *Engine) Evaluate(call Call) Decision {
 	}
 
 	// Phase 2: destructive-verb catch-all (Plan R7). Only fires when
-	// no explicit rule matched. The catch-all always returns
-	// DecisionRequireApproval; it never allows or denies outright.
-	if p.CatchAll.Decision == DecisionRequireApproval && IsDestructiveTool(call.Tool) {
+	// no explicit rule matched. The check is hard-coded: any tool
+	// whose name contains a destructive verb requires approval
+	// regardless of what CatchAll.Decision is set to, because
+	// allowing the gate to be silently disabled by a misconfigured
+	// Policy would be a fail-open footgun. CatchAll is retained on
+	// Policy for audit surfacing (it identifies the synthetic rule
+	// in audit events) but its Decision is an invariant, not a
+	// switch.
+	if IsDestructiveTool(call.Tool) {
 		return DecisionRequireApproval
 	}
 
 	// Phase 3: default-deny.
 	return p.DefaultDecision
+}
+
+// isASCIIPrintable reports whether s is non-empty and consists only
+// of printable ASCII bytes in [0x21, 0x7E] (excludes space, NUL,
+// DEL, and all non-ASCII). This is the canonical character class
+// for MCP tool identifiers per the spec, and it is the only safe
+// way to defend against cross-script homoglyph attacks: there is
+// no Unicode normalization that folds, say, Cyrillic 'е' to Latin
+// 'e' without a script-confusables database.
+func isASCIIPrintable(s string) bool {
+	if s == "" {
+		return false
+	}
+	for i := 0; i < len(s); i++ {
+		if s[i] < 0x21 || s[i] > 0x7E {
+			return false
+		}
+	}
+	return true
 }
 
 // ruleMatches reports whether the rule applies to call. Tool

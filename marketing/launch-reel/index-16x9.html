@@ -31,7 +31,6 @@
         font-size: 48px;
         line-height: 1.3;
         text-align: center;
-        opacity: 0;
       }
       .center-col { flex-direction: column; gap: 32px; }
       .small { font-size: 32px; line-height: 1.4; color: #fafafa; }
@@ -113,8 +112,8 @@
       <div id="s2" class="clip" data-start="5" data-duration="10" data-track-index="1">
         <div class="center-col" style="padding: 0 120px;">
           <div class="small" id="s2-1">Agents in production. Acting on credentials.</div>
-          <div class="small" id="s2-2" style="display:none">No production vs. <span class="muted">dev</span> boundary at the action layer.</div>
-          <div class="small" id="s2-3" style="display:none"><span class="muted">Output guardrails</span> don't stop the tool call. <span class="muted">Observability</span> is post-hoc.</div>
+          <div class="small" id="s2-2" style="opacity:0">No production vs. <span class="muted">dev</span> boundary at the action layer.</div>
+          <div class="small" id="s2-3" style="opacity:0"><span class="muted">Output guardrails</span> don't stop the tool call. <span class="muted">Observability</span> is post-hoc.</div>
         </div>
       </div>
 
@@ -131,7 +130,7 @@
         <div class="center-col">
           <div id="s4-mark" class="wordmark">mcp-socd</div>
           <div id="s4-tag" class="tagline"><span class="safe">default-deny</span> for AI agents.</div>
-          <ul class="bullets" id="s4-bullets" style="display:none">
+          <ul class="bullets" id="s4-bullets" style="opacity:0">
             <li>- stdio proxy between agent and MCP server</li>
             <li>- action-layer enforcement, not output</li>
             <li>- one static binary, framework-agnostic</li>
@@ -164,7 +163,18 @@
       <!-- =========================== Scene 6: Demo terminal (65-75s) =========================== -->
       <div id="s6" class="clip" data-start="65" data-duration="10" data-track-index="1">
         <div class="center-col" style="padding: 80px 120px;">
-          <div class="terminal" id="s6-term"></div>
+          <div class="terminal" id="s6-term">
+            <div class="term-line" id="t-line-0"><span class="term-dim">$ mcp-socd -- falcon-mcp</span></div>
+            <div class="term-line" id="t-line-1">mcp-socd 0.1.0</div>
+            <div class="term-line" id="t-line-2">  <span class="term-dim">config:</span>    ~/.config/mcp-socd/config.yaml</div>
+            <div class="term-line" id="t-line-3">  <span class="term-dim">upstream:</span>  [falcon-mcp]</div>
+            <div class="term-line" id="t-line-4">  <span class="term-dim">audit:</span>     stderr (use --audit-stdout for SIEM)</div>
+            <div class="term-line" id="t-line-5">&nbsp;</div>
+            <div class="term-line" id="t-line-6"><span class="term-prompt">&gt;</span> agent → <span class="term-dim">isolate_endpoint</span> <span class="term-dim">host=dc01.corp</span></div>
+            <div class="term-line" id="t-line-7"><span class="term-dim">policy:</span>    <span class="term-red">blast_radius=5</span> → require_approval</div>
+            <div class="term-line" id="t-line-8"><span class="term-dim">approval:</span>  <span class="term-yellow">pending Slack @secops</span></div>
+            <div class="term-line" id="t-line-9"><span class="term-dim">audit:</span>     OCSF 2004 verdict=awaiting_approval actor=agent:v1</div>
+          </div>
         </div>
       </div>
 
@@ -229,26 +239,24 @@
       tl.set("#s5", { opacity: 0 }, 65.0);
 
       // ----- Scene 6: Demo terminal (65-75s) -----
-      const term = document.getElementById("s6-term");
+      // Lines are pre-rendered in the static HTML; GSAP fades each in
+      // one at a time. (Earlier versions appended lines via tl.call();
+      // HyperFrames' static-frame dedup re-ran the timeline and the
+      // appendChild loop duplicated rows in the rendered output.)
       const termLines = [
-        { text: '<span class="term-dim">$ mcp-socd -- falcon-mcp</span>', at: 65.0 },
-        { text: 'mcp-socd 0.1.0', at: 65.6 },
-        { text: '  <span class="term-dim">config:</span>    ~/.config/mcp-socd/config.yaml', at: 66.2 },
-        { text: '  <span class="term-dim">upstream:</span>  [falcon-mcp]', at: 66.8 },
-        { text: '  <span class="term-dim">audit:</span>     stderr (use --audit-stdout for SIEM)', at: 67.4 },
-        { text: '', at: 68.4 },
-        { text: '<span class="term-prompt">&gt;</span> agent → <span class="term-dim">isolate_endpoint</span> <span class="term-dim">host=dc01.corp</span>', at: 68.6 },
-        { text: '<span class="term-dim">policy:</span>    <span class="term-red">blast_radius=5</span> → require_approval', at: 70.0 },
-        { text: '<span class="term-dim">approval:</span>  <span class="term-yellow">pending Slack @secops</span>', at: 71.4 },
-        { text: '<span class="term-dim">audit:</span>     OCSF 2004 verdict=awaiting_approval actor=agent:v1', at: 72.6 },
+        { id: "t-line-0", at: 65.0 },
+        { id: "t-line-1", at: 65.6 },
+        { id: "t-line-2", at: 66.2 },
+        { id: "t-line-3", at: 66.8 },
+        { id: "t-line-4", at: 67.4 },
+        { id: "t-line-5", at: 68.4 },
+        { id: "t-line-6", at: 68.6 },
+        { id: "t-line-7", at: 70.0 },
+        { id: "t-line-8", at: 71.4 },
+        { id: "t-line-9", at: 72.6 },
       ];
-      term.innerHTML = '';
       termLines.forEach((line) => {
-        tl.call(() => {
-          const div = document.createElement("div");
-          div.innerHTML = line.text || "&nbsp;";
-          term.appendChild(div);
-        }, [], line.at);
+        tl.fromTo("#" + line.id, { opacity: 0 }, { opacity: 1, duration: 0.2 }, line.at);
       });
       tl.from("#s6", { opacity: 0, duration: 0.4 }, 65.0);
       tl.to("#s6", { opacity: 0, duration: 0.4 }, 74.6);

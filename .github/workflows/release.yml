@@ -3,6 +3,16 @@ name: release
 # Tags drive a real release (goreleaser publishes to GitHub).
 # Pull requests drive a snapshot build (no publish) so binary
 # regressions show up on PRs.
+#
+# Supply-chain pinning: every `uses:` reference is pinned to a
+# specific commit SHA (not a floating tag like `@v6` or `@v4`).
+# Floating refs can be replaced by an upstream maintainer or a
+# compromised account; SHA pins require a deliberate workflow
+# change to advance. The goreleaser distribution itself is also
+# pinned to a specific minor version (`~v2.4`) for the same reason.
+#
+# To bump any pin: open a PR that updates the SHA, review the
+# goreleaser-action release notes, and merge.
 on:
   push:
     tags:
@@ -17,8 +27,8 @@ jobs:
     name: test
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+      - uses: actions/setup-go@cdcb36043654635271a94b9a6d1392de5bb323a7 # v5.0.1
         with:
           go-version: '1.25'
           cache: true
@@ -32,18 +42,18 @@ jobs:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
         with:
           fetch-depth: 0
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@cdcb36043654635271a94b9a6d1392de5bb323a7 # v5.0.1
         with:
           go-version: '1.25'
           cache: true
       - name: Run goreleaser snapshot
-        uses: goreleaser/goreleaser-action@v6
+        uses: goreleaser/goreleaser-action@286f3b13b1b49da4ac219696163fb8c1c93e1200 # v6.0.0
         with:
           distribution: goreleaser
-          version: latest
+          version: '~v2.4'
           args: release --snapshot --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -54,18 +64,18 @@ jobs:
     needs: test
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
         with:
           fetch-depth: 0
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@cdcb36043654635271a94b9a6d1392de5bb323a7 # v5.0.1
         with:
           go-version: '1.25'
           cache: true
       - name: Run goreleaser
-        uses: goreleaser/goreleaser-action@v6
+        uses: goreleaser/goreleaser-action@286f3b13b1b49da4ac219696163fb8c1c93e1200 # v6.0.0
         with:
           distribution: goreleaser
-          version: latest
+          version: '~v2.4'
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

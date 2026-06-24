@@ -4,6 +4,9 @@
 
 mcp-socd is a stdio proxy that sits between an AI agent and its MCP server. Every tool call is intercepted, classified against a typed action catalog, and gated by a default-deny policy before it reaches the upstream. High-blast-radius actions get routed to a human via terminal prompt or Slack DM. Every decision lands as an OCSF Detection Finding in your SIEM.
 
+<img width="720" height="405" alt="68747470733a2f2f66696c65732e636174626f782e6d6f652f7276716239722e676966" src="https://github.com/user-attachments/assets/94fba57a-7b08-4f0a-9504-307136086eaf" />
+
+
 ## The problem
 
 You have AI agents deployed in production. They act on credentials. They make real tool calls — isolate endpoints, rotate keys, block users — and you have no action-layer enforcement.
